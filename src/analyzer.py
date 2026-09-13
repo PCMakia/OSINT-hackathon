@@ -344,6 +344,34 @@ def build_offline_dossier(topic: str, raw_results: list) -> str:
     return "\n".join(sections)
 
 
+HEALTH_PING_TIMEOUT_SECONDS = 2.0
+
+
+async def check_anthropic_health() -> str:
+    """Fast Anthropic reachability check. Returns Online or Degraded."""
+    if not ANTHROPIC_API_KEY:
+        return "Degraded"
+
+    async def _ping() -> None:
+        models = getattr(_anthropic_client, "models", None)
+        list_models = getattr(models, "list", None) if models is not None else None
+        if callable(list_models):
+            await list_models()
+            return
+        await _anthropic_client.messages.create(
+            model=MODEL_NAME,
+            max_tokens=1,
+            messages=[{"role": "user", "content": "ping"}],
+        )
+
+    try:
+        await asyncio.wait_for(_ping(), timeout=HEALTH_PING_TIMEOUT_SECONDS)
+        return "Online"
+    except Exception:
+        logger.warning("Anthropic health ping failed or timed out", exc_info=True)
+        return "Degraded"
+
+
 async def synthesize_dossier(topic: str, search_results: list) -> str:
     """Ask Claude 3.5 Sonnet to produce a Markdown OSINT dossier."""
     system_prompt = select_system_prompt(topic) or HARDWARE_OSINT_TEMPLATE

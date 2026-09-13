@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import io
 import logging
 import re
 import sys
+import time
 from pathlib import Path
 
 _SRC_DIR = Path(__file__).resolve().parent
@@ -20,15 +22,23 @@ logger = logging.getLogger(__name__)
 
 import discord
 
-from analyzer import synthesize_dossier
-from cache import normalize_query_key
-from config import DISCORD_TOKEN
+from analyzer import check_anthropic_health, synthesize_dossier
+from cache import cache_storage_stats, normalize_query_key
+from config import ANTHROPIC_API_KEY, DISCORD_TOKEN, TAVILY_API_KEY
 from search import execute_web_search
 
 COMMAND_PREFIX = "!investigate"
+STATUS_COMMAND = "!status"
 CHANNEL_CARD_LIMIT = 1500
 THREAD_CHUNK_LIMIT = 1900
 EXPORT_FILENAME = "Razer_AVA_Dossier.md"
+TELEMETRY_COLOR = 0x2B2D31
+STATUS_HEALTH_TIMEOUT_SECONDS = 2.5
+
+total_requests = 0
+successful_requests = 0
+failed_requests = 0
+execution_latencies: list[float] = []
 
 GATEBOX_COMPARISON_TABLE = (
     "**Razer AVA vs Gatebox (cached OSINT)**\n\n"
@@ -261,64 +271,190 @@ class OSINTView(discord.ui.View):
                 )
 
 
+def _avg_latency_ms() -> float:
+    if not execution_latencies:
+        return 0.0
+    return sum(execution_latencies) / len(execution_latencies)
+
+
+def _success_rate_pct() -> float:
+    if total_requests <= 0:
+        return 0.0
+    return (successful_requests / total_requests) * 100.0
+
+
+def _tavily_configured() -> bool:
+    return bool(TAVILY_API_KEY)
+
+
+async def _collect_health() -> tuple[str, str, dict]:
+    """Non-blocking health snapshot; Anthropic ping is hard-capped."""
+    cache_default: dict = {
+        "key_count": 0,
+        "seeded_records": 0,
+        "size_kb": 0.0,
+        "active": False,
+    }
+
+    async def _cache_snapshot() -> dict:
+        return await asyncio.to_thread(cache_storage_stats)
+
+    try:
+        anthropic_status, cache_stats = await asyncio.wait_for(
+            asyncio.gather(
+                check_anthropic_health(),
+                _cache_snapshot(),
+            ),
+            timeout=STATUS_HEALTH_TIMEOUT_SECONDS,
+        )
+    except Exception:
+        logger.warning("Status health collection timed out or failed", exc_info=True)
+        anthropic_status = "Degraded" if ANTHROPIC_API_KEY else "Degraded"
+        try:
+            cache_stats = cache_storage_stats()
+        except Exception:
+            logger.exception("Cache stats failed during status fallback")
+            cache_stats = cache_default
+
+    if isinstance(anthropic_status, Exception):
+        logger.warning("Anthropic health check raised", exc_info=anthropic_status)
+        anthropic_status = "Degraded"
+    if isinstance(cache_stats, Exception):
+        logger.warning("Cache stats raised", exc_info=cache_stats)
+        cache_stats = cache_default
+
+    tavily_status = "Online" if _tavily_configured() else "Offline"
+    if not isinstance(cache_stats, dict):
+        cache_stats = cache_default
+    return tavily_status, str(anthropic_status), cache_stats
+
+
+async def send_system_telemetry(channel: discord.abc.Messageable) -> None:
+    tavily_status, anthropic_status, cache_stats = await _collect_health()
+    cache_engine = "Active" if cache_stats.get("active", True) else "Inactive"
+    key_count = int(cache_stats.get("key_count") or 0)
+    seeded = int(cache_stats.get("seeded_records") or key_count)
+    size_kb = float(cache_stats.get("size_kb") or 0.0)
+
+    embed = discord.Embed(
+        title="⚙️ OSINT Detective — System Telemetry",
+        color=TELEMETRY_COLOR,
+    )
+    embed.add_field(
+        name="🟢 Service Health",
+        value=(
+            f"Tavily: **{tavily_status}**\n"
+            f"Anthropic: **{anthropic_status}**\n"
+            f"Local Cache Engine: **{cache_engine}**"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="📊 Execution Performance",
+        value=(
+            f"Total Requests Served: **{total_requests}**\n"
+            f"Success Rate: **{_success_rate_pct():.1f}%** "
+            f"({successful_requests} ok / {failed_requests} failed)\n"
+            f"Average Processing Latency: **{_avg_latency_ms():.0f} ms**"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="💾 Cache Storage",
+        value=(
+            f"Total Seeded Records: **{seeded}** ({key_count} cached keys)\n"
+            f"Disk Size: **{size_kb:.2f} KB**\n"
+            f"Lookup Strategy: **Normalized Key Matching**"
+        ),
+        inline=False,
+    )
+    embed.set_footer(
+        text="Host System: Operational | Async Timeout Ceiling: 8s Search / 12s LLM"
+    )
+    await channel.send(embed=embed)
+
+
 async def run_investigation(query: str, message: discord.Message) -> None:
     """Drive Tavily + Claude while editing `message` in place."""
-    embed = (
-        message.embeds[0]
-        if message.embeds
-        else discord.Embed(
-            title="🕵️ OSINT Investigation Started",
-            color=discord.Color.blurple(),
-        )
-    )
+    global total_requests, successful_requests, failed_requests
 
-    search_payload = await execute_web_search(query)
-    results = search_payload.get("results") or []
-    if not isinstance(results, list):
-        results = [results]
+    total_requests += 1
+    started = time.perf_counter()
+    succeeded = False
 
-    step2 = "🧠 Step 2/3: Cross-referencing data..."
-    if search_payload.get("fallback") and search_payload.get("cache_hit"):
-        step2 += "\nCached OSINT engaged (Tavily unavailable)."
-    elif search_payload.get("fallback"):
-        step2 += "\nSearch degraded — cache miss."
-    embed.description = step2
-    await message.edit(embed=embed)
-
-    dossier = await synthesize_dossier(query, results)
-
-    thread: discord.Thread | None = None
-    if len(dossier) > CHANNEL_CARD_LIMIT:
-        try:
-            thread = await message.create_thread(
-                name=_thread_name(query),
-                auto_archive_duration=1440,
+    try:
+        embed = (
+            message.embeds[0]
+            if message.embeds
+            else discord.Embed(
+                title="🕵️ OSINT Investigation Started",
+                color=discord.Color.blurple(),
             )
-            await _post_dossier_to_thread(thread, dossier)
-        except Exception:
-            logger.exception("Failed to auto-create dossier thread")
-            thread = None
+        )
 
-    embed.title = "🕵️ OSINT Investigation Started"
-    embed.description = _build_summary_card(
-        query,
-        dossier,
-        fallback=bool(search_payload.get("fallback")),
-        cache_hit=bool(search_payload.get("cache_hit")),
-        thread=thread,
-    )
-    embed.color = (
-        discord.Color.gold() if search_payload.get("fallback") else discord.Color.green()
-    )
+        search_payload = await execute_web_search(query)
+        results = search_payload.get("results") or []
+        if not isinstance(results, list):
+            results = [results]
 
-    view = OSINTView(
-        dossier=dossier,
-        target=query,
-        status_message=message,
-        thread=thread,
-    )
-    _active_views.add(view)
-    await message.edit(embed=embed, view=view)
+        step2 = "🧠 Step 2/3: Cross-referencing data..."
+        if search_payload.get("fallback") and search_payload.get("cache_hit"):
+            step2 += "\nCached OSINT engaged (Tavily unavailable)."
+        elif search_payload.get("fallback"):
+            step2 += "\nSearch degraded — cache miss."
+        embed.description = step2
+        await message.edit(embed=embed)
+
+        dossier = await synthesize_dossier(query, results)
+
+        thread: discord.Thread | None = None
+        if len(dossier) > CHANNEL_CARD_LIMIT:
+            try:
+                thread = await message.create_thread(
+                    name=_thread_name(query),
+                    auto_archive_duration=1440,
+                )
+                await _post_dossier_to_thread(thread, dossier)
+            except Exception:
+                logger.exception("Failed to auto-create dossier thread")
+                thread = None
+
+        embed.title = "🕵️ OSINT Investigation Started"
+        embed.description = _build_summary_card(
+            query,
+            dossier,
+            fallback=bool(search_payload.get("fallback")),
+            cache_hit=bool(search_payload.get("cache_hit")),
+            thread=thread,
+        )
+        embed.color = (
+            discord.Color.gold() if search_payload.get("fallback") else discord.Color.green()
+        )
+
+        view = OSINTView(
+            dossier=dossier,
+            target=query,
+            status_message=message,
+            thread=thread,
+        )
+        _active_views.add(view)
+        await message.edit(embed=embed, view=view)
+        succeeded = True
+    except Exception:
+        failed_requests += 1
+        raise
+    else:
+        successful_requests += 1
+    finally:
+        execution_latencies.append((time.perf_counter() - started) * 1000.0)
+        logger.info(
+            "Investigation finished success=%s latency_ms=%.0f totals=%s/%s/%s",
+            succeeded,
+            execution_latencies[-1],
+            total_requests,
+            successful_requests,
+            failed_requests,
+        )
 
 
 @client.event
@@ -335,7 +471,15 @@ async def on_message(message: discord.Message) -> None:
     if message.author.bot:
         return
     content = (message.content or "").strip()
-    if not content.lower().startswith(COMMAND_PREFIX):
+    lowered = content.lower()
+    if lowered == STATUS_COMMAND or lowered.startswith(STATUS_COMMAND + " "):
+        try:
+            await send_system_telemetry(message.channel)
+        except Exception:
+            logger.exception("Failed to send system telemetry")
+            await message.reply("Could not collect system telemetry.")
+        return
+    if not lowered.startswith(COMMAND_PREFIX):
         return
 
     query = content[len(COMMAND_PREFIX) :].strip()

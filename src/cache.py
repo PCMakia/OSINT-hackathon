@@ -228,3 +228,29 @@ class CacheManager:
         except OSError:
             logger.exception("Failed to persist cache file %s", self._path)
             raise
+
+    def stats(self) -> dict[str, Any]:
+        """Return key count and on-disk size for telemetry."""
+        with self._lock:
+            store = self._read_unlocked()
+            key_count = len(store)
+            seeded_records = sum(
+                1 for seed_key in SEED_DATA if _resolve_store_key(store, seed_key) is not None
+            )
+        size_bytes = 0
+        try:
+            if self._path.exists():
+                size_bytes = self._path.stat().st_size
+        except OSError:
+            logger.exception("Failed to stat cache file %s", self._path)
+        return {
+            "key_count": key_count,
+            "seeded_records": seeded_records,
+            "size_kb": size_bytes / 1024.0,
+            "active": True,
+        }
+
+
+def cache_storage_stats() -> dict[str, Any]:
+    """Snapshot of the local cache engine (safe to run in a worker thread)."""
+    return CacheManager().stats()
