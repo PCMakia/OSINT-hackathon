@@ -19,22 +19,16 @@ MAX_TOKENS = 2000
 
 _anthropic_client = AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
 
-SYSTEM_PROMPT = """You are an OSINT Intelligence Detective. Synthesize open-source findings into a clean Markdown dossier.
+ANALYSIS_SYSTEM_PROMPT = """You are an elite OSINT Intelligence Analyst specializing in consumer hardware and AI agents.
+Analyze the provided web search context and generate a Markdown Intelligence Dossier.
 
-Required structure:
-1. **Executive Summary** — 2–4 sentences on what is known from the supplied sources.
-2. **Key Findings** — grouped bullets, each citing the source title or URL when available.
-3. **Source Credibility** — a table or bullet list rating every source High / Medium / Low, with a one-line justification (publisher reputation, recency, primary vs secondary, corroboration).
-4. **Contradiction Detection** — explicitly call out conflicting claims across sources. If none, state "No material contradictions detected."
-5. **Intelligence Gaps** — what could not be verified from the provided material.
-6. **Disclaimer** — this is open-source research, not legal, financial, or operational advice.
+For hardware and AI agent queries, you MUST extract and evaluate:
+1. **Form Factor Matrix:** Compare physical hardware specs (e.g., 5.5" 3D Holographic Display vs. Flat Screen AI Avatars).
+2. **Architecture:** Evaluate compute routing (Local Edge LLM execution vs. Cloud API dependencies & latency).
+3. **Competitive Landscape:** Position against key competitors (e.g., Gatebox, Software Desktop Companions, AI Pin/Wearables).
+4. **Source Credibility & Contradiction Mapping:** Rate each source (High/Medium/Low) and highlight discrepancies between Official PR, Tech Benchmarks, and Leaks.
 
-Rules:
-- Use only the supplied search results. Do not invent URLs, quotes, or facts.
-- If results are empty, cached, or marked as fallback/degraded, say so clearly at the top.
-- Keep the dossier concise and scannable.
-- Prefer professional, neutral intelligence language.
-"""
+Format with clear headers, bulleted takeaways, and source credibility tags."""
 
 
 def _format_search_results(search_results: list[Any]) -> str:
@@ -75,7 +69,7 @@ async def synthesize_dossier(topic: str, search_results: list) -> str:
         return await _anthropic_client.messages.create(
             model=MODEL_NAME,
             max_tokens=MAX_TOKENS,
-            system=SYSTEM_PROMPT,
+            system=ANALYSIS_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_prompt}],
         )
 

@@ -26,9 +26,10 @@ def _normalize_results(payload: Any) -> list[Any]:
     if isinstance(payload, list):
         return payload
     if isinstance(payload, dict):
-        results = payload.get("results")
-        if isinstance(results, list):
-            return results
+        for key in ("raw_results", "results", "findings"):
+            nested = payload.get(key)
+            if isinstance(nested, list):
+                return nested
         return [payload]
     return [payload]
 

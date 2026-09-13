@@ -42,5 +42,29 @@
     ],
     "confidence": "seed",
     "disclaimer": "Synthetic fixture data. Not a live investigation."
+  },
+  "razer ava ai companion": {
+    "topic": "Razer AVA AI Companion",
+    "timestamp": "2026-09-13T12:00:00Z",
+    "raw_results": [
+      {
+        "title": "Project AVA: 3D Hologram AI Desk Companion - Razer",
+        "url": "https://www.razer.com/concepts/project-ava",
+        "content": "Razer AVA features an animated 5.5 inch 3D holographic display with integrated camera, microphone, and speaker array. Operates as an interactive 3D desktop avatar with real-time audio and vision sensing.",
+        "credibility_tier": "High (Official PR)"
+      },
+      {
+        "title": "Hardware Analysis: Local Edge AI vs Cloud Dependencies in Desk Companions",
+        "url": "https://techbenchmarks.example/hardware/razer-ava-architecture",
+        "content": "Early teardowns and hardware leaks indicate Razer AVA utilizes a hybrid architecture: local micro-models handle vision/audio wake words, while deep LLM processing offloads to cloud endpoints. Benchmarks show 180ms local response latency versus 850ms full cloud cycles.",
+        "credibility_tier": "Medium (Tech Benchmarks / Leaks)"
+      },
+      {
+        "title": "Desktop AI Hardware Battle: Gatebox vs Razer AVA vs Desktop Software Companions",
+        "url": "https://hardware-review.example/desktop-ai-market-2026",
+        "content": "Razer AVA enters a market previously dominated by Japan's Gatebox (costing $1,500+) and flat-screen software companions like Desktop Goose/AI Avatars. AVA bridges the gap by offering physical 3D volumetric presence at a consumer peripheral price point.",
+        "credibility_tier": "Medium (Market Analysis)"
+      }
+    ]
   }
 }
