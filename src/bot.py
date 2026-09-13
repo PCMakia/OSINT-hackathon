@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import io
+import json
 import logging
 import re
 import sys
 import time
 from pathlib import Path
+from urllib.parse import quote
 
 _SRC_DIR = Path(__file__).resolve().parent
 if str(_SRC_DIR) not in sys.path:
@@ -53,6 +55,81 @@ GATEBOX_COMPARISON_TABLE = (
     "| I/O | Camera, microphone, speaker array | Enclosed display + companion I/O |\n"
     "| Positioning | Bridges Gatebox price gap vs flat-screen software avatars | Category incumbent at luxury price |\n"
 )
+
+QUICKCHART_BASE = "https://quickchart.io/chart"
+
+
+def generate_gatebox_radar_chart_url() -> str:
+    """Build a zero-dependency QuickChart radar URL (Razer AVA vs Gatebox)."""
+    chart_config = {
+        "type": "radar",
+        "data": {
+            "labels": [
+                "Price Value",
+                "Portability",
+                "Local Compute",
+                "Form Factor",
+                "Ecosystem",
+            ],
+            "datasets": [
+                {
+                    "label": "Razer AVA",
+                    "data": [8, 9, 8, 9, 7],
+                    "borderColor": "#5865F2",
+                    "backgroundColor": "rgba(88, 101, 242, 0.25)",
+                    "pointBackgroundColor": "#5865F2",
+                    "pointBorderColor": "#FFFFFF",
+                    "pointRadius": 4,
+                    "pointHoverRadius": 6,
+                    "pointBorderWidth": 2,
+                    "borderWidth": 2,
+                },
+                {
+                    "label": "Gatebox",
+                    "data": [3, 4, 3, 10, 5],
+                    "borderColor": "#EB459E",
+                    "backgroundColor": "rgba(235, 69, 158, 0.25)",
+                    "pointBackgroundColor": "#EB459E",
+                    "pointBorderColor": "#FFFFFF",
+                    "pointRadius": 4,
+                    "pointHoverRadius": 6,
+                    "pointBorderWidth": 2,
+                    "borderWidth": 2,
+                },
+            ],
+        },
+        "options": {
+            "plugins": {
+                "legend": {
+                    "display": True,
+                    "labels": {
+                        "color": "#FFFFFF",
+                        "font": {"size": 13},
+                    },
+                },
+            },
+            "scales": {
+                "r": {
+                    "suggestedMin": 0,
+                    "suggestedMax": 10,
+                    "angleLines": {"color": "rgba(255, 255, 255, 0.25)"},
+                    "grid": {"color": "rgba(255, 255, 255, 0.2)"},
+                    "pointLabels": {
+                        "color": "#FFFFFF",
+                        "font": {"size": 12},
+                    },
+                    "ticks": {
+                        "color": "#FFFFFF",
+                        "backdropColor": "transparent",
+                        "showLabelBackdrop": False,
+                        "stepSize": 2,
+                    },
+                }
+            },
+        },
+    }
+    encoded = quote(json.dumps(chart_config, separators=(",", ":")), safe="")
+    return f"{QUICKCHART_BASE}?bkg=transparent&c={encoded}"
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -259,10 +336,14 @@ class OSINTView(discord.ui.View):
         button: discord.ui.Button,
     ) -> None:
         try:
-            await interaction.response.send_message(
-                GATEBOX_COMPARISON_TABLE,
-                ephemeral=True,
+            chart_url = generate_gatebox_radar_chart_url()
+            embed = discord.Embed(
+                title="📊 Gatebox Comparison",
+                description=GATEBOX_COMPARISON_TABLE,
+                color=0x5865F2,
             )
+            embed.set_image(url=chart_url)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception:
             logger.exception("Failed to send Gatebox comparison")
             if not interaction.response.is_done():
