@@ -20,33 +20,49 @@ logging.basicConfig(
 from analyzer import synthesize_dossier
 from search import execute_web_search
 
+DEFAULT_TARGET = "razer ava ai companion"
+
+
+def _configure_stdio() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
+
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run the OSINT Intelligence Detective pipeline in the terminal.",
+        description="Run the OSINT Intelligence Detective pipeline in the terminal (no Discord).",
     )
     parser.add_argument(
+        "-t",
         "--target",
-        required=True,
-        help='Investigation topic, e.g. "razer ava ai companion"',
+        default=DEFAULT_TARGET,
+        help='Investigation topic (default: "razer ava ai companion")',
     )
     return parser.parse_args(argv)
 
 
 async def run_cli(target: str) -> str:
-    print("🔍 Phase 1/3: Searching Tavily & Loading Cache...", flush=True)
+    print("🔍 [CLI] Phase 1/3: Searching Tavily / Checking Local Cache...", flush=True)
     search_payload = await execute_web_search(target)
     results = search_payload.get("results") or []
     if not isinstance(results, list):
         results = [results]
 
-    print("🧠 Phase 2/3: Cross-Referencing Sources & Fact-Checking...", flush=True)
-    print("✨ Phase 3/3: Synthesizing Dossier...", flush=True)
+    print("🧠 [CLI] Phase 2/3: Synthesizing OSINT Intelligence...", flush=True)
     dossier = await synthesize_dossier(target, results)
+    print("✨ [CLI] Phase 3/3: Dossier Complete.", flush=True)
     return dossier
 
 
 def main(argv: list[str] | None = None) -> int:
+    _configure_stdio()
+    logging.getLogger("search").setLevel(logging.CRITICAL)
+    logging.getLogger("analyzer").setLevel(logging.CRITICAL)
     args = _parse_args(argv)
     target = (args.target or "").strip()
     if not target:
@@ -60,7 +76,8 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:
         print(f"Investigation failed: {exc}", file=sys.stderr)
         return 1
-    print(dossier, flush=True)
+    sys.stdout.write(dossier if dossier.endswith("\n") else dossier + "\n")
+    sys.stdout.flush()
     return 0
 
 
