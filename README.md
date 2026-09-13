@@ -125,4 +125,7 @@ No Discord? Run directly in terminal: python src/cli.py --target 'razer ava ai c
 
 (`-t` is equivalent; default target is `razer ava ai companion`.) Offline sample dossiers: `samples/Razer_AVA_OSINT_Dossier.md` and `samples/XZ_Utils_OSINT_Dossier.md`.
 
+## Evaluation:
+Use script to evaluate its performance
+
 Pipeline eval (latency, fallback, dossier structure): `python src/eval.py`
