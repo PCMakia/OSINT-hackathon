@@ -12,18 +12,18 @@ _SRC_DIR = Path(__file__).resolve().parent
 if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
+
 import discord
 
 from analyzer import synthesize_dossier
 from cache import normalize_query_key
 from config import DISCORD_TOKEN
 from search import execute_web_search
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-)
-logger = logging.getLogger(__name__)
 
 COMMAND_PREFIX = "!investigate"
 CHANNEL_CARD_LIMIT = 1500
@@ -184,8 +184,9 @@ class OSINTView(discord.ui.View):
         button: discord.ui.Button,
     ) -> None:
         try:
+            logger.info("Exporting dossier as %s for target=%s", EXPORT_FILENAME, self.target)
             await interaction.response.send_message(
-                content=f"Full raw dossier for **{self.target}**.",
+                content=f"Full raw dossier for **{self.target}** (`{EXPORT_FILENAME}`).",
                 file=self._markdown_file(),
             )
         except Exception:
@@ -324,10 +325,9 @@ async def run_investigation(query: str, message: discord.Message) -> None:
 async def on_ready() -> None:
     user = client.user
     if user is None:
-        print("OSINT Detective bot is connected, but user metadata is unavailable.")
+        logger.warning("OSINT Detective bot is connected, but user metadata is unavailable.")
         return
-    print(f"OSINT Detective online as {user} (ID: {user.id})")
-    logger.info("Logged in as %s (%s)", user, user.id)
+    logger.info("OSINT Detective online as %s (ID: %s)", user, user.id)
 
 
 @client.event

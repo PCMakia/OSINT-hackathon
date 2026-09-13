@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import threading
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 CACHE_PATH = Path(__file__).resolve().parent.parent / "cache.json"
 
@@ -209,6 +212,7 @@ class CacheManager:
                 return {}
             payload = json.loads(raw)
         except (OSError, json.JSONDecodeError):
+            logger.exception("Failed to read cache file %s", self._path)
             return {}
         if not isinstance(payload, dict):
             return {}
@@ -218,5 +222,9 @@ class CacheManager:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         serialized = json.dumps(store, indent=2, ensure_ascii=False) + "\n"
         tmp_path = self._path.with_suffix(self._path.suffix + ".tmp")
-        tmp_path.write_text(serialized, encoding="utf-8")
-        tmp_path.replace(self._path)
+        try:
+            tmp_path.write_text(serialized, encoding="utf-8")
+            tmp_path.replace(self._path)
+        except OSError:
+            logger.exception("Failed to persist cache file %s", self._path)
+            raise

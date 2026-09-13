@@ -86,6 +86,11 @@ async def execute_web_search(query: str) -> dict:
     except asyncio.TimeoutError:
         logger.exception("Tavily search timed out after %.1fs: %s", SEARCH_TIMEOUT_SECONDS, query)
         cached = _cache.get(query)
+        logger.warning(
+            "Tavily fallback cache_%s for query=%s",
+            "hit" if cached is not None else "miss",
+            query,
+        )
         return _fallback_payload(
             query,
             error=f"Tavily search timed out after {SEARCH_TIMEOUT_SECONDS:.1f}s",
@@ -94,6 +99,11 @@ async def execute_web_search(query: str) -> dict:
     except Exception as exc:
         logger.exception("Tavily search failed: %s", query)
         cached = _cache.get(query)
+        logger.warning(
+            "Tavily fallback cache_%s for query=%s",
+            "hit" if cached is not None else "miss",
+            query,
+        )
         return _fallback_payload(
             query,
             error=f"Tavily search failed: {exc}",
