@@ -15,9 +15,10 @@ from templates import HARDWARE_OSINT_TEMPLATE, select_system_prompt
 
 logger = logging.getLogger(__name__)
 
-SYNTHESIS_TIMEOUT_SECONDS = 12.0
-MODEL_NAME = "claude-3-5-sonnet-20241022"
-MAX_TOKENS = 2000
+SYNTHESIS_TIMEOUT_SECONDS = 25.0
+MODEL_NAME = "claude-sonnet-4-6"
+MAX_TOKENS = 4096
+TEMPERATURE = 0.2
 
 _anthropic_client = AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
 
@@ -386,6 +387,7 @@ async def synthesize_dossier(topic: str, search_results: list) -> str:
         return await _anthropic_client.messages.create(
             model=MODEL_NAME,
             max_tokens=MAX_TOKENS,
+            temperature=TEMPERATURE,
             system=system_prompt,
             messages=[{"role": "user", "content": user_prompt}],
         )
@@ -403,22 +405,18 @@ async def synthesize_dossier(topic: str, search_results: list) -> str:
                 texts.append(text)
         dossier = _prepare_discord_markdown("\n".join(texts))
         if not dossier:
-            logger.error("Anthropic returned an empty dossier; using cached offline synthesis")
+            logger.error("Anthropic API Error: empty model response")
             return build_offline_dossier(topic, search_results)
         return dossier
-    except asyncio.TimeoutError:
-        logger.exception(
-            "Anthropic synthesis timed out after %.1fs: %s",
-            SYNTHESIS_TIMEOUT_SECONDS,
-            topic,
-        )
+    except asyncio.TimeoutError as e:
+        logger.error(f"Anthropic API Error: {e}")
         return build_offline_dossier(topic, search_results)
-    except AuthenticationError:
-        logger.exception("Anthropic authentication failed: %s", topic)
+    except AuthenticationError as e:
+        logger.error(f"Anthropic API Error: {e}")
         return build_offline_dossier(topic, search_results)
-    except APIError:
-        logger.exception("Anthropic API error: %s", topic)
+    except APIError as e:
+        logger.error(f"Anthropic API Error: {e}")
         return build_offline_dossier(topic, search_results)
-    except Exception:
-        logger.exception("Anthropic synthesis failed: %s", topic)
+    except Exception as e:
+        logger.error(f"Anthropic API Error: {e}")
         return build_offline_dossier(topic, search_results)
