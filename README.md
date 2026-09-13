@@ -5,8 +5,11 @@ An autonomous Open-Source Intelligence agent bridging **Discord**, **Tavily AI**
 ---
 
 ## Judge Quickstart & Testing Command
+```text
+https://discord.com/oauth2/authorize?client_id=1548760414928642250&permissions=309237763072&integration_type=0&scope=bot
+```
 
-Invite the bot to a server (Message Content Intent enabled), then in any channel type:
+Invite the bot to a server (using link above), then in any channel type:
 
 ```text
 !investigate target="razer ava ai companion"
@@ -87,6 +90,8 @@ In the [Discord Developer Portal](https://discord.com/developers/applications), 
 ```bash
 python src/bot.py
 ```
+
+No Discord? Run directly in terminal: python src/cli.py --target 'razer ava ai companion'
 
 Then run the judge command:
 
