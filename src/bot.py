@@ -556,7 +556,7 @@ async def send_system_telemetry(channel: discord.abc.Messageable) -> None:
         inline=False,
     )
     embed.set_footer(
-        text="Host System: Operational | Async Timeout Ceiling: 8s Search / 25s LLM"
+        text="Host System: Operational | Async Timeout Ceiling: 8s Search / 45s LLM"
     )
     await channel.send(embed=embed)
 

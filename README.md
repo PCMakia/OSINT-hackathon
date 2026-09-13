@@ -18,7 +18,7 @@ Every dossier includes **⚠️ Contradiction & Discrepancy Alert** — a first-
 
 Under API rate limits or network drops, the agent dynamically switches from LLM synthesis to a local structured intelligence parser without crashing or showing error messages.
 
-Tavily is capped at **8s** and Claude at **25s**. On timeout, `AuthenticationError`, or `APIError`, `build_offline_dossier` still emits the same Markdown contract from `cache.json` (normalized keys such as `razer ava` → `razer ava ai companion`). Users see a complete investigation card, not a stack trace or empty “analyzer offline” stub.
+Tavily is capped at **8s** and Claude at **45s**. On timeout, `AuthenticationError`, or `APIError`, `build_offline_dossier` still emits the same Markdown contract from `cache.json` (normalized keys such as `razer ava` → `razer ava ai companion`). Users see a complete investigation card, not a stack trace or empty “analyzer offline” stub.
 
 ### 3. In-Chat OSINT Micro-Workspace
 
@@ -50,7 +50,7 @@ Equivalent triggers (`razer ava`, `razer ava ai companion`) resolve to the same 
 | --- | --- |
 | **Discord API** (`discord.py`) | Micro-workspace: live embeds, buttons, ephemeral overlays, threads, QuickChart |
 | **Tavily AI API** | Web sensor (`max_results=5`, 8s timeout) |
-| **Anthropic Claude API** (`claude-sonnet-4-6`) | Cognitive engine (25s timeout, `max_tokens=4096`) with contradiction-first templates |
+| **Anthropic Claude API** (`claude-sonnet-4-6`) | Cognitive engine (45s timeout, `max_tokens=1500`) with contradiction-first templates |
 
 ---
 
@@ -65,7 +65,7 @@ Equivalent triggers (`razer ava`, `razer ava ai companion`) resolve to the same 
 | **0:00–0:25 — Trigger & live embed edits** | Send `!investigate target="razer ava ai companion"`. Show the single embed titled “OSINT Investigation Started” stepping **1/3 Gathering intelligence → 2/3 Cross-referencing → 3/3 Dossier complete** via in-place `message.edit`. |
 | **0:25–1:10 — Dossier & contradiction alert** | Walk the summary card (≤1,500 characters). Open the auto-created `OSINT-Dossier-<Target>` thread and highlight **⚠️ Contradiction & Discrepancy Alert** (Official PR vs hybrid/cloud latency leaks vs market analysis). |
 | **1:10–1:40 — Micro-workspace (radar, ephemeral, threads)** | Click **📊 Gatebox Comparison** (ephemeral AVA $300–$500 vs Gatebox $1,500+ table **and** QuickChart radar). Click **🧵 Open Thread** if needed. Click **📄 Export Markdown** and confirm **`Razer_AVA_Dossier.md`**. |
-| **1:40–2:00 — Zero-downtime fallback** | Call out 8s / 25s `asyncio.wait_for` and the local structured parser (`src/cache.py` + `build_offline_dossier`). Same command still completes a dossier when live keys or networks fail — no crash, no error dump. |
+| **1:40–2:00 — Zero-downtime fallback** | Call out 8s / 45s `asyncio.wait_for` and the local structured parser (`src/cache.py` + `build_offline_dossier`). Same command still completes a dossier when live keys or networks fail — no crash, no error dump. |
 
 ---
 
@@ -75,7 +75,7 @@ Equivalent triggers (`razer ava`, `razer ava ai companion`) resolve to the same 
 
 **Reliability safeguards:**
 
-- Strict async timeouts (`asyncio.wait_for` at **8s search** / **25s synthesis**).
+- Strict async timeouts (`asyncio.wait_for` at **8s search** / **45s synthesis**).
 - Smart zero-downtime fallback (`src/cache.py` + `cache.json`), with normalized keys (`target="..."` and aliases such as `razer ava`).
 - Channel card **≤1,500 characters**; un-truncated report routed into an automatic Discord thread.
 - Anthropic failures return a structured offline dossier from cached snippets — never raw JSON or user-facing exception text.
@@ -88,7 +88,7 @@ Equivalent triggers (`razer ava`, `razer ava ai companion`) resolve to the same 
 | --- | --- |
 | Discord | `discord.py==2.4.0` |
 | Search | `tavily-python==0.5.0` |
-| LLM | `anthropic==0.34.0` · `claude-sonnet-4-6` (`max_tokens=4096`, `temperature=0.2`) |
+| LLM | `anthropic==0.34.0` · `claude-sonnet-4-6` (`max_tokens=1500`, `temperature=0.2`) |
 | Config | `python-dotenv==1.0.1` |
 
 ### Setup

@@ -8,17 +8,21 @@ import logging
 import re
 from typing import Any
 
-from anthropic import APIError, AsyncAnthropic, AuthenticationError
+from anthropic import AsyncAnthropic
 
 from config import ANTHROPIC_API_KEY
 from templates import HARDWARE_OSINT_TEMPLATE, select_system_prompt
 
 logger = logging.getLogger(__name__)
 
-SYNTHESIS_TIMEOUT_SECONDS = 25.0
+SYNTHESIS_TIMEOUT_SECONDS = 45.0
 MODEL_NAME = "claude-sonnet-4-6"
-MAX_TOKENS = 4096
+MAX_TOKENS = 1500
 TEMPERATURE = 0.2
+CONCISE_SYSTEM = (
+    "You are a concise OSINT research analyst. "
+    "Output crisp, well-formatted Markdown tables without fluff."
+)
 
 _anthropic_client = AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
 
@@ -388,7 +392,7 @@ async def synthesize_dossier(topic: str, search_results: list) -> str:
             model=MODEL_NAME,
             max_tokens=MAX_TOKENS,
             temperature=TEMPERATURE,
-            system=system_prompt,
+            system=f"{CONCISE_SYSTEM}\n\n{system_prompt}",
             messages=[{"role": "user", "content": user_prompt}],
         )
 
@@ -408,15 +412,9 @@ async def synthesize_dossier(topic: str, search_results: list) -> str:
             logger.error("Anthropic API Error: empty model response")
             return build_offline_dossier(topic, search_results)
         return dossier
-    except asyncio.TimeoutError as e:
-        logger.error(f"Anthropic API Error: {e}")
-        return build_offline_dossier(topic, search_results)
-    except AuthenticationError as e:
-        logger.error(f"Anthropic API Error: {e}")
-        return build_offline_dossier(topic, search_results)
-    except APIError as e:
-        logger.error(f"Anthropic API Error: {e}")
+    except asyncio.TimeoutError:
+        logger.error("Anthropic API Error: Request timed out after 45s")
         return build_offline_dossier(topic, search_results)
     except Exception as e:
-        logger.error(f"Anthropic API Error: {e}")
+        logger.error(f"Anthropic API Error: {type(e).__name__} - {e}")
         return build_offline_dossier(topic, search_results)
