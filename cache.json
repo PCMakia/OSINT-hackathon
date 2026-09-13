@@ -1,0 +1,46 @@
+{
+  "test-competitor": {
+    "query": "test-competitor",
+    "source": "offline-seed",
+    "status": "verified-fallback",
+    "summary": "Dummy competitor OSINT briefing for offline / timeout fallback. Acme Rival Labs (fictional) positions as a mid-market threat-intel vendor with public web presence, conference talks, and job postings indicating expansion into Discord-based alerting.",
+    "findings": [
+      {
+        "category": "corporate",
+        "detail": "Public site lists HQ in Austin, TX and a 40–60 person team."
+      },
+      {
+        "category": "product",
+        "detail": "Marketing pages describe automated OSINT digests and Slack/Discord bots."
+      },
+      {
+        "category": "hiring",
+        "detail": "Open roles: OSINT analyst, Python backend, community manager."
+      }
+    ],
+    "confidence": "seed",
+    "disclaimer": "Synthetic fixture data. Not a live investigation."
+  },
+  "test-security": {
+    "query": "test-security",
+    "source": "offline-seed",
+    "status": "verified-fallback",
+    "summary": "Dummy security OSINT briefing for offline / timeout fallback. Fictional org 'Northwind Payments' has a typical public attack surface: corporate site, status page, GitHub org, and leaked-credential chatter in open paste samples used only as training data.",
+    "findings": [
+      {
+        "category": "exposure",
+        "detail": "Public GitHub org contains two archived demo repos with no secrets."
+      },
+      {
+        "category": "infrastructure",
+        "detail": "Status page reports historical CDN incidents; no current outage."
+      },
+      {
+        "category": "hygiene",
+        "detail": "SPF/DKIM records present on the primary domain (fixture values)."
+      }
+    ],
+    "confidence": "seed",
+    "disclaimer": "Synthetic fixture data. Not a live investigation."
+  }
+}
