@@ -105,8 +105,9 @@ HARDWARE_QUERY_KEYWORDS = (
 
 
 def select_system_prompt(topic: str) -> str:
-    """Choose a synthesis template; default to hardware OSINT."""
+    """Choose a synthesis template from the query; default to hardware OSINT."""
     lowered = (topic or "").casefold()
     if any(keyword in lowered for keyword in HARDWARE_QUERY_KEYWORDS):
         return HARDWARE_OSINT_TEMPLATE
+    # Default to hardware OSINT for this demo (Razer AVA / companion agents).
     return HARDWARE_OSINT_TEMPLATE
