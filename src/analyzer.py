@@ -10,6 +10,7 @@ from typing import Any
 from anthropic import AsyncAnthropic
 
 from config import ANTHROPIC_API_KEY
+from templates import HARDWARE_OSINT_TEMPLATE, select_system_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -19,17 +20,6 @@ MAX_TOKENS = 2000
 
 _anthropic_client = AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
 
-ANALYSIS_SYSTEM_PROMPT = """You are an elite OSINT Intelligence Analyst specializing in consumer hardware and AI agents.
-Analyze the provided web search context and generate a Markdown Intelligence Dossier.
-
-For hardware and AI agent queries, you MUST extract and evaluate:
-1. **Form Factor Matrix:** Compare physical hardware specs (e.g., 5.5" 3D Holographic Display vs. Flat Screen AI Avatars).
-2. **Architecture:** Evaluate compute routing (Local Edge LLM execution vs. Cloud API dependencies & latency).
-3. **Competitive Landscape:** Position against key competitors (e.g., Gatebox, Software Desktop Companions, AI Pin/Wearables).
-4. **Source Credibility & Contradiction Mapping:** Rate each source (High/Medium/Low) and highlight discrepancies between Official PR, Tech Benchmarks, and Leaks.
-
-Format with clear headers, bulleted takeaways, and source credibility tags."""
-
 
 def _format_search_results(search_results: list[Any]) -> str:
     try:
@@ -38,38 +28,63 @@ def _format_search_results(search_results: list[Any]) -> str:
         return str(search_results)
 
 
+def _prepare_discord_markdown(text: str) -> str:
+    """Strip a wrapping fence so Discord splits clean Markdown, not a code block."""
+    stripped = (text or "").strip()
+    if stripped.startswith("```"):
+        first_newline = stripped.find("\n")
+        if first_newline != -1:
+            stripped = stripped[first_newline + 1 :]
+        if stripped.endswith("```"):
+            stripped = stripped[: -3].rstrip()
+    return stripped.strip()
+
+
 def _degraded_fallback(topic: str, reason: str, search_results: list[Any]) -> str:
     preview = _format_search_results(search_results)
     if len(preview) > 1200:
         preview = preview[:1200] + "\n... [truncated]"
     return (
-        "## Investigation Degraded\n\n"
-        f"**Status:** Anthropic API unavailable ({reason})\n"
-        f"**Topic:** {topic}\n\n"
-        "The cognitive engine timed out or failed. No live dossier could be synthesized. "
-        "Raw search context is attached below for manual review.\n\n"
-        "### Source Credibility\n"
-        "- Live ratings unavailable due to API degradation.\n\n"
-        "### Contradiction Detection\n"
-        "- Not evaluated (analyzer offline).\n\n"
-        "### Raw Search Context\n"
+        "## Executive Summary\n\n"
+        f"Anthropic API degradation ({reason}) blocked live synthesis for **{topic}**. "
+        "Treat the tables below as structural placeholders, not verified intelligence.\n\n"
+        "## ⚠️ Contradiction & Discrepancy Alert\n\n"
+        "> Contradiction mapping was not evaluated because the cognitive engine timed out or failed. "
+        "Official PR, benchmark, and leak claims could not be cross-checked.\n\n"
+        "## Form Factor & Technical Specs Matrix\n\n"
+        "| Dimension | Subject Device | Comparison Notes |\n"
+        "| --- | --- | --- |\n"
+        "| Display / Form Factor | Not evidenced in sources | Analyzer offline |\n"
+        "| AI Engine | Not evidenced in sources | Analyzer offline |\n"
+        "| Latency | Not evidenced in sources | Analyzer offline |\n"
+        "| Power / Connectivity | Not evidenced in sources | Analyzer offline |\n\n"
+        "## Competitive Positioning\n\n"
+        "- Gatebox: not evaluated (API degradation).\n"
+        "- Software desktop companions: not evaluated (API degradation).\n\n"
+        "## Source Credibility & Verification Tier\n\n"
+        "| Source URL | Type | Credibility Rating | Rationale |\n"
+        "| --- | --- | --- | --- |\n"
+        "| Not evidenced in sources | Bench | Low | Live ratings unavailable due to API degradation |\n\n"
+        "Cached or raw search context for manual review:\n\n"
         f"```json\n{preview}\n```\n"
     )
 
 
 async def synthesize_dossier(topic: str, search_results: list) -> str:
     """Ask Claude 3.5 Sonnet to produce a Markdown OSINT dossier."""
+    system_prompt = select_system_prompt(topic) or HARDWARE_OSINT_TEMPLATE
     user_prompt = (
         f"Investigate this topic:\n{topic}\n\n"
         "Search results (JSON):\n"
-        f"{_format_search_results(search_results)}"
+        f"{_format_search_results(search_results)}\n\n"
+        "Follow the system template exactly. Output valid Markdown only, ready to post in Discord."
     )
 
     async def _create_message() -> Any:
         return await _anthropic_client.messages.create(
             model=MODEL_NAME,
             max_tokens=MAX_TOKENS,
-            system=ANALYSIS_SYSTEM_PROMPT,
+            system=system_prompt,
             messages=[{"role": "user", "content": user_prompt}],
         )
 
@@ -84,7 +99,7 @@ async def synthesize_dossier(topic: str, search_results: list) -> str:
             text = getattr(block, "text", None)
             if text:
                 texts.append(text)
-        dossier = "\n".join(texts).strip()
+        dossier = _prepare_discord_markdown("\n".join(texts))
         if not dossier:
             return _degraded_fallback(topic, "empty model response", search_results)
         return dossier
