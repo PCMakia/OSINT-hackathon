@@ -4,7 +4,7 @@ This is not a chat window glued to a search API. It is an **investigation agent*
 
 An autonomous Open-Source Intelligence agent bridging **Discord**, **Tavily AI**, and **Anthropic Claude 3.5 Sonnet** to produce structured, cross-referenced hardware, market, and cybersecurity dossiers.
 
-**External app usage** Cursor for implementation helper
+**External app usage** Cursor for implementation helper, Tavily for API web search, Claude API for summary, Discord API for display
 
 ---
 
