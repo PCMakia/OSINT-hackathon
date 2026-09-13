@@ -4,6 +4,8 @@ This is not a chat window glued to a search API. It is an **investigation agent*
 
 An autonomous Open-Source Intelligence agent bridging **Discord**, **Tavily AI**, and **Anthropic Claude 3.5 Sonnet** to produce structured, cross-referenced hardware, market, and cybersecurity dossiers.
 
+**External app usage** Cursor for implementation helper
+
 ---
 
 ## 2-Minute Demo Video
@@ -14,7 +16,7 @@ An autonomous Open-Source Intelligence agent bridging **Discord**, **Tavily AI**
 
 
 
-## Judge Quickstart & Testing Command
+## Judge Quickstart & Testing Command (using my deployed app for hackathon)
 
 ```text
 https://discord.com/oauth2/authorize?client_id=1548760414928642250&permissions=309237763072&integration_type=0&scope=bot
