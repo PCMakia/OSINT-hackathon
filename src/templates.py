@@ -83,6 +83,16 @@ Markdown table with columns: Source URL | Type | Credibility Rating | Rationale
 Type: PR, Leak, or Bench. Rating: High, Medium, or Low.
 """
 
+CYBER_QUERY_KEYWORDS = (
+    "xz utils",
+    "xz backdoor",
+    "cve-2024-3094",
+    "liblzma",
+    "jia tan",
+    "supply chain",
+    "sshd",
+)
+
 HARDWARE_QUERY_KEYWORDS = (
     "razer",
     "ava",
@@ -107,7 +117,8 @@ HARDWARE_QUERY_KEYWORDS = (
 def select_system_prompt(topic: str) -> str:
     """Choose a synthesis template from the query; default to hardware OSINT."""
     lowered = (topic or "").casefold()
+    if any(keyword in lowered for keyword in CYBER_QUERY_KEYWORDS):
+        return GENERAL_OSINT_TEMPLATE
     if any(keyword in lowered for keyword in HARDWARE_QUERY_KEYWORDS):
         return HARDWARE_OSINT_TEMPLATE
-    # Default to hardware OSINT for this demo (Razer AVA / companion agents).
     return HARDWARE_OSINT_TEMPLATE

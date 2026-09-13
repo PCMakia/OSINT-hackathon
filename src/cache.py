@@ -19,6 +19,7 @@ _TARGET_RE = re.compile(
 )
 
 RAZER_AVA_KEY = "razer ava ai companion"
+XZ_UTILS_KEY = "xz utils backdoor"
 
 SEED_DATA: dict[str, Any] = {
     "test-competitor": {
@@ -113,6 +114,51 @@ SEED_DATA: dict[str, Any] = {
             },
         ],
     },
+    XZ_UTILS_KEY: {
+        "topic": "XZ Utils Backdoor (CVE-2024-3094)",
+        "timestamp": "2026-09-13T12:00:00Z",
+        "raw_results": [
+            {
+                "title": "oss-security: backdoor in upstream xz/liblzma leading to sshd compromise",
+                "url": "https://www.openwall.com/lists/oss-security/2024/03/29/4",
+                "content": (
+                    "CVE-2024-3094 describes a malicious injection in the XZ Utils build of liblzma "
+                    "(versions 5.6.0 and 5.6.1). Obfuscated test files in the tarball extracted extra "
+                    "object code during Debian/RPM builds, silently modifying liblzma. The implanted "
+                    "logic was designed to interfere with OpenSSH sshd when it is linked against the "
+                    "compromised library, enabling an authentication bypass for a designated attacker "
+                    "key rather than a generic crash-only bug."
+                ),
+                "credibility_tier": "High (Primary researcher / oss-security)",
+            },
+            {
+                "title": "CISA Alert: Reported Supply Chain Compromise Affecting XZ Utils (CVE-2024-3094)",
+                "url": "https://www.cisa.gov/news-events/alerts/2024/03/29/reported-supply-chain-compromise-affecting-xz-utils-data-compression-library-cve-2024-3094",
+                "content": (
+                    "Government and distro advisories frame CVE-2024-3094 as a supply-chain compromise: "
+                    "the backdoor shipped through the official xz tarball and downstream Linux packages, "
+                    "not a post-compromise host implant. sshd on systemd-based distributions that pull in "
+                    "liblzma was the high-value target. Operators were advised to downgrade to 5.4.x "
+                    "lineage, audit for 5.6.0/5.6.1, and treat the event as a maintainer-trust failure "
+                    "across the open-source compression stack."
+                ),
+                "credibility_tier": "High (Official advisory)",
+            },
+            {
+                "title": "Jia Tan maintainer timeline: multi-year social engineering of XZ Utils",
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-3094",
+                "content": (
+                    "Open reporting on the Jia Tan identity describes a years-long pressure campaign: "
+                    "new contributor activity from 2021–2022, growing commit rights, and eventual "
+                    "handoff pressure on original maintainer Lasse Collin. The timeline is used in "
+                    "OSINT as a case study in supply-chain social engineering — patient reputation "
+                    "building, mailing-list coercion, and a delayed payload in liblzma — rather than "
+                    "a single opportunistic commit."
+                ),
+                "credibility_tier": "Medium (NVD / secondary timeline synthesis)",
+            },
+        ],
+    },
 }
 
 QUERY_ALIASES: dict[str, str] = {
@@ -121,6 +167,11 @@ QUERY_ALIASES: dict[str, str] = {
     "razer ava companion": RAZER_AVA_KEY,
     "project ava": RAZER_AVA_KEY,
     "project ava razer": RAZER_AVA_KEY,
+    "xz utils": XZ_UTILS_KEY,
+    "xz backdoor": XZ_UTILS_KEY,
+    "xz utils backdoor": XZ_UTILS_KEY,
+    "cve-2024-3094": XZ_UTILS_KEY,
+    "cve 2024 3094": XZ_UTILS_KEY,
 }
 
 

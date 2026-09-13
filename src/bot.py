@@ -29,6 +29,7 @@ from search import execute_web_search
 
 COMMAND_PREFIX = "!investigate"
 STATUS_COMMAND = "!status"
+DEMO_COMMAND = "!demo"
 CHANNEL_CARD_LIMIT = 1500
 THREAD_CHUNK_LIMIT = 1900
 EXPORT_FILENAME = "Razer_AVA_Dossier.md"
@@ -271,6 +272,111 @@ class OSINTView(discord.ui.View):
                 )
 
 
+class DemoTargetSelect(discord.ui.Select):
+    """Dropdown that launches a canned OSINT investigation."""
+
+    def __init__(self) -> None:
+        options = [
+            discord.SelectOption(
+                label="Razer AVA AI Companion",
+                value="razer ava ai companion",
+                description="Hardware OSINT, 3D Holographic Specs, Edge vs Cloud Architecture.",
+                emoji="📱",
+            ),
+            discord.SelectOption(
+                label="XZ Utils Backdoor (CVE-2024-3094)",
+                value="xz utils backdoor",
+                description="Cybersecurity OSINT, Supply Chain Vulnerability, SSH Bypass.",
+                emoji="🛡️",
+            ),
+        ]
+        super().__init__(
+            placeholder="Select an OSINT research target…",
+            min_values=1,
+            max_values=1,
+            options=options,
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        query = (self.values or [None])[0]
+        if not query:
+            await interaction.response.send_message(
+                "No target selected.",
+                ephemeral=True,
+            )
+            return
+        embed = discord.Embed(
+            title="🕵️ OSINT Investigation Started",
+            description="🔍 Step 1/3: Gathering intelligence...",
+            color=discord.Color.blurple(),
+        )
+        embed.set_footer(text=f"Query: {query[:200]} · launched from !demo")
+        try:
+            await interaction.response.send_message(embed=embed)
+            status_msg = await interaction.original_response()
+        except Exception:
+            logger.exception("Failed to acknowledge demo selection")
+            if not interaction.response.is_done():
+                await interaction.response.send_message(
+                    "Could not start the investigation from this dropdown.",
+                    ephemeral=True,
+                )
+            return
+        await execute_investigation(query, status_msg, error_reply_channel=interaction.channel)
+
+
+class DemoView(discord.ui.View):
+    def __init__(self) -> None:
+        super().__init__(timeout=None)
+        self.add_item(DemoTargetSelect())
+
+
+async def execute_investigation(
+    query: str,
+    status_msg: discord.Message,
+    *,
+    error_reply_channel: discord.abc.Messageable | None = None,
+) -> None:
+    try:
+        await run_investigation(query, status_msg)
+    except Exception:
+        logger.exception("Investigation pipeline failed for query: %s", query)
+        fail = discord.Embed(
+            title="🕵️ OSINT Investigation Started",
+            description="Investigation failed due to an unexpected error.",
+            color=discord.Color.red(),
+        )
+        fail.set_footer(text=f"Query: {query[:200]}")
+        try:
+            await status_msg.edit(embed=fail)
+        except Exception:
+            logger.exception("Failed to update status embed after pipeline error")
+        try:
+            destination = error_reply_channel or status_msg.channel
+            await destination.send(
+                "The investigation pipeline failed. Check bot logs for details."
+            )
+        except Exception:
+            logger.exception("Failed to send pipeline error reply")
+
+
+async def send_demo_picker(channel: discord.abc.Messageable) -> None:
+    embed = discord.Embed(
+        title="🎮 Select an OSINT Research Target",
+        description=(
+            "Choose a canned target. The bot runs the same `!investigate` pipeline "
+            "(Tavily → Claude, with cache fallback) and posts live step edits.\n\n"
+            "📱 **Razer AVA AI Companion** — Hardware OSINT\n"
+            "🛡️ **XZ Utils Backdoor (CVE-2024-3094)** — Cybersecurity OSINT"
+        ),
+        color=discord.Color.dark_teal(),
+    )
+    embed.set_footer(text="Selections map to cache keys razer ava ai companion and xz utils backdoor")
+    view = DemoView()
+    _active_views.add(view)
+    await channel.send(embed=embed, view=view)
+
+
 def _avg_latency_ms() -> float:
     if not execution_latencies:
         return 0.0
@@ -472,6 +578,13 @@ async def on_message(message: discord.Message) -> None:
         return
     content = (message.content or "").strip()
     lowered = content.lower()
+    if lowered == DEMO_COMMAND or lowered.startswith(DEMO_COMMAND + " "):
+        try:
+            await send_demo_picker(message.channel)
+        except Exception:
+            logger.exception("Failed to send demo picker")
+            await message.reply("Could not open the OSINT demo selector.")
+        return
     if lowered == STATUS_COMMAND or lowered.startswith(STATUS_COMMAND + " "):
         try:
             await send_system_telemetry(message.channel)
@@ -501,26 +614,7 @@ async def on_message(message: discord.Message) -> None:
         await message.reply("Could not start the investigation (Discord send failed).")
         return
 
-    try:
-        await run_investigation(query, status_msg)
-    except Exception:
-        logger.exception("Investigation pipeline failed for query: %s", query)
-        fail = discord.Embed(
-            title="🕵️ OSINT Investigation Started",
-            description="Investigation failed due to an unexpected error.",
-            color=discord.Color.red(),
-        )
-        fail.set_footer(text=f"Query: {query[:200]}")
-        try:
-            await status_msg.edit(embed=fail)
-        except Exception:
-            logger.exception("Failed to update status embed after pipeline error")
-        try:
-            await message.reply(
-                "The investigation pipeline failed. Check bot logs for details."
-            )
-        except Exception:
-            logger.exception("Failed to send pipeline error reply")
+    await execute_investigation(query, status_msg, error_reply_channel=message.channel)
 
 
 if __name__ == "__main__":
