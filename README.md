@@ -6,27 +6,13 @@ An autonomous Open-Source Intelligence agent bridging **Discord**, **Tavily AI**
 
 ---
 
-## Three innovations (not a search wrapper)
+## 2-Minute Demo Video
 
-### 1. Automated Discrepancy & Contradiction Detection Engine
-
-Unlike standard summarizers, the agent cross-references official marketing claims against hardware leaks/benchmarks and surfaces conflicting data in a high-priority warning banner.
-
-Every dossier includes **⚠️ Contradiction & Discrepancy Alert** — a first-class section, not an afterthought. Official PR, benchmark/leak write-ups, and market analysis are tagged by credibility tier, then compared (for example Razer AVA’s on-desk holographic story vs hybrid local/cloud latency figures). Judges should look for the blockquote banner before the spec matrix.
-
-### 2. Smart Zero-Downtime Fallback Architecture
-
-Under API rate limits or network drops, the agent dynamically switches from LLM synthesis to a local structured intelligence parser without crashing or showing error messages.
-
-Tavily is capped at **8s** and Claude at **45s**. On timeout, `AuthenticationError`, or `APIError`, `build_offline_dossier` still emits the same Markdown contract from `cache.json` (normalized keys such as `razer ava` → `razer ava ai companion`). Users see a complete investigation card, not a stack trace or empty “analyzer offline” stub.
-
-### 3. In-Chat OSINT Micro-Workspace
-
-Rather than outputting wall-of-text responses, the bot deploys dynamic QuickChart radar visuals, ephemeral spec comparison overlays, and dedicated thread routing directly inside Discord.
-
-The channel stays a **≤1,500-character** summary card. **📊 Gatebox Comparison** opens an ephemeral spec table plus a QuickChart radar (Price Value, Portability, Local Compute, Form Factor, Ecosystem). Overflow and the full report live in `OSINT-Dossier-<Target>` threads; **📄 Export Markdown** attaches `Razer_AVA_Dossier.md`. `!demo` is a dropdown launcher for hardware vs CVE-2024-3094 cybersecurity tracks.
+**Link:** [https://youtu.be/L10Tf27bXgo](https://youtu.be/L10Tf27bXgo)
 
 ---
+
+
 
 ## Judge Quickstart & Testing Command
 
@@ -46,28 +32,39 @@ Equivalent triggers (`razer ava`, `razer ava ai companion`) resolve to the same 
 
 ### Integration checklist (multi-app)
 
-| Surface | Role |
-| --- | --- |
-| **Discord API** (`discord.py`) | Micro-workspace: live embeds, buttons, ephemeral overlays, threads, QuickChart |
-| **Tavily AI API** | Web sensor (`max_results=5`, 8s timeout) |
+
+| Surface                                        | Role                                                                                 |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------ |
+| **Discord API** (`discord.py`)                 | Micro-workspace: live embeds, buttons, ephemeral overlays, threads, QuickChart       |
+| **Tavily AI API**                              | Web sensor (`max_results=5`, 8s timeout)                                             |
 | **Anthropic Claude API** (`claude-sonnet-4-6`) | Cognitive engine (45s timeout, `max_tokens=1500`) with contradiction-first templates |
 
----
-
-## 2-Minute Demo Video
-
-**Link:** [Insert YouTube / Loom Link Here]
-
-### Script breakdown
-
-| Time | Beat |
-| --- | --- |
-| **0:00–0:25 — Trigger & live embed edits** | Send `!investigate target="razer ava ai companion"`. Show the single embed titled “OSINT Investigation Started” stepping **1/3 Gathering intelligence → 2/3 Cross-referencing → 3/3 Dossier complete** via in-place `message.edit`. |
-| **0:25–1:10 — Dossier & contradiction alert** | Walk the summary card (≤1,500 characters). Open the auto-created `OSINT-Dossier-<Target>` thread and highlight **⚠️ Contradiction & Discrepancy Alert** (Official PR vs hybrid/cloud latency leaks vs market analysis). |
-| **1:10–1:40 — Micro-workspace (radar, ephemeral, threads)** | Click **📊 Gatebox Comparison** (ephemeral AVA $300–$500 vs Gatebox $1,500+ table **and** QuickChart radar). Click **🧵 Open Thread** if needed. Click **📄 Export Markdown** and confirm **`Razer_AVA_Dossier.md`**. |
-| **1:40–2:00 — Zero-downtime fallback** | Call out 8s / 45s `asyncio.wait_for` and the local structured parser (`src/cache.py` + `build_offline_dossier`). Same command still completes a dossier when live keys or networks fail — no crash, no error dump. |
 
 ---
+
+
+
+## Three innovations (not a search wrapper)
+
+
+
+### 1. Automated Discrepancy & Contradiction Detection Engine
+
+Unlike standard summarizers, the agent cross-references official marketing claims against hardware leaks/benchmarks and surfaces conflicting data in a high-priority warning banner.
+
+Every dossier includes **⚠️ Contradiction & Discrepancy Alert** — a first-class section, not an afterthought. Official PR, benchmark/leak write-ups, and market analysis are tagged by credibility tier, then compared (for example Razer AVA’s on-desk holographic story vs hybrid local/cloud latency figures). Judges should look for the blockquote banner before the spec matrix.
+
+### 2. Smart Zero-Downtime Fallback Architecture
+
+Under API rate limits or network drops, the agent dynamically switches from LLM synthesis to a local structured intelligence parser without crashing or showing error messages.
+
+Tavily is capped at **8s** and Claude at **45s**. On timeout, `AuthenticationError`, or `APIError`, `build_offline_dossier` still emits the same Markdown contract from `cache.json` (normalized keys such as `razer ava` → `razer ava ai companion`). Users see a complete investigation card, not a stack trace or empty “analyzer offline” stub.
+
+### 3. In-Chat OSINT Micro-Workspace
+
+Rather than outputting wall-of-text responses, the bot deploys dynamic QuickChart radar visuals, ephemeral spec comparison overlays, and dedicated thread routing directly inside Discord.
+
+The channel stays a **≤1,500-character** summary card. **📊 Gatebox Comparison** opens an ephemeral spec table plus a QuickChart radar (Price Value, Portability, Local Compute, Form Factor, Ecosystem). Overflow and the full report live in `OSINT-Dossier-<Target>` threads; **📄 Export Markdown** attaches `Topic_Dossier.md`. `!demo` is a dropdown launcher for hardware vs CVE-2024-3094 cybersecurity tracks.
 
 ## Short System & Reliability Brief
 
@@ -82,14 +79,20 @@ Equivalent triggers (`razer ava`, `razer ava ai companion`) resolve to the same 
 
 ---
 
+
+
 ## Tech Stack & Installation
 
-| Component | Package / model |
-| --- | --- |
-| Discord | `discord.py==2.4.0` |
-| Search | `tavily-python==0.5.0` |
-| LLM | `anthropic==0.34.0` · `claude-sonnet-4-6` (`max_tokens=1500`, `temperature=0.2`) |
-| Config | `python-dotenv==1.0.1` |
+
+| Component | Package / model                                                                  |
+| --------- | -------------------------------------------------------------------------------- |
+| Discord   | `discord.py==2.4.0`                                                              |
+| Search    | `tavily-python==0.5.0`                                                           |
+| LLM       | `anthropic==0.34.0` · `claude-sonnet-4-6` (`max_tokens=1500`, `temperature=0.2`) |
+| Config    | `python-dotenv==1.0.1`                                                           |
+
+
+
 
 ### Setup
 
@@ -121,9 +124,3 @@ No Discord? Run directly in terminal: python src/cli.py --target 'razer ava ai c
 (`-t` is equivalent; default target is `razer ava ai companion`.) Offline sample dossiers: `samples/Razer_AVA_OSINT_Dossier.md` and `samples/XZ_Utils_OSINT_Dossier.md`.
 
 Pipeline eval (latency, fallback, dossier structure): `python src/eval.py`
-
-Then run the judge command:
-
-```text
-!investigate target="razer ava ai companion"
-```
