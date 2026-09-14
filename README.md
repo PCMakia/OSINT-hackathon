@@ -16,22 +16,6 @@ An autonomous Open-Source Intelligence agent bridging **Discord**, **Tavily AI**
 
 
 
-## Judge Quickstart & Testing Command (using my deployed app for hackathon)
-
-```text
-https://discord.com/oauth2/authorize?client_id=1548760414928642250&permissions=309237763072&integration_type=0&scope=bot
-```
-
-Invite the bot to a server (using link above), then in any channel type:
-
-```text
-!investigate target="razer ava ai companion"
-```
-
-Equivalent triggers (`razer ava`, `razer ava ai companion`) resolve to the same cached topic. Alternate domain: `!investigate xz utils backdoor` or `!demo`.
-
-**Zero-downtime fallback is the default safety net** if live API credits or networks fail — the dossier still renders from local structured OSINT, not an error bubble.
-
 ### Integration checklist (multi-app)
 
 
